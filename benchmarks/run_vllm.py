@@ -33,6 +33,7 @@ def main():
         config = yaml.safe_load(f)
 
     model_name = config["model"]["name"]
+    revision = config["model"].get("revision", "main")
     prompt = config["profiling"]["prompt"]
     max_new_tokens = config["profiling"]["max_new_tokens"]
     warmup_runs = config["profiling"]["num_warmup_runs"]
@@ -56,6 +57,8 @@ def main():
     print("  Loading vLLM engine (this downloads model on first run)...")
     llm = LLM(
         model=model_name,
+        revision=revision,
+        tokenizer_revision=revision,
         dtype="float16",
         # gpu_memory_utilization=0.90,  # leave 10% headroom; tune if OOM
         trust_remote_code=True,

@@ -4,6 +4,8 @@
 model:
   # Change to meta-llama/Meta-Llama-3.1-8B if you have access
   name: "mistralai/Mistral-7B-v0.1"
+  # Hub commit hash; pin for final runs so every backend loads the same weights
+  revision: "main"
 
 backends:
   - name: hf_transformers

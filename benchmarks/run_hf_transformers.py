@@ -22,13 +22,14 @@ from benchmarks.profiler import Profiler, log_to_tracker
 QUANT_CHOICES = ["fp16", "int8", "int4"]
 
 
-def load_model_and_tokenizer(model_name: str, quantization: str):
-    print(f"  Loading {model_name} [{quantization}] ...", flush=True)
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+def load_model_and_tokenizer(model_name: str, quantization: str, revision: str = "main"):
+    print(f"  Loading {model_name}@{revision} [{quantization}] ...", flush=True)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, revision=revision)
 
     if quantization == "fp16":
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
+            revision=revision,
             torch_dtype=torch.float16,
             device_map="auto",
         )
@@ -37,6 +38,7 @@ def load_model_and_tokenizer(model_name: str, quantization: str):
         bnb_config = BitsAndBytesConfig(load_in_8bit=True)
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
+            revision=revision,
             quantization_config=bnb_config,
             device_map="auto",
         )
@@ -50,6 +52,7 @@ def load_model_and_tokenizer(model_name: str, quantization: str):
         )
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
+            revision=revision,
             quantization_config=bnb_config,
             device_map="auto",
         )
@@ -76,6 +79,7 @@ def main():
         config = yaml.safe_load(f)
 
     model_name = config["model"]["name"]
+    revision = config["model"].get("revision", "main")
     prompt = config["profiling"]["prompt"]
     max_new_tokens = config["profiling"]["max_new_tokens"]
     warmup_runs = config["profiling"]["num_warmup_runs"]
@@ -97,7 +101,7 @@ def main():
         print(f"  HF Transformers | {model_name} | {quant}")
         print(f"{'#'*60}")
 
-        tokenizer, model = load_model_and_tokenizer(model_name, quant)
+        tokenizer, model = load_model_and_tokenizer(model_name, quant, revision)
         device = next(model.parameters()).device
         inputs = tokenizer(prompt, return_tensors="pt").to(device)
 

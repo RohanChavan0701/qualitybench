@@ -26,9 +26,10 @@ def build_lm_eval_command(
     quantization: str,
     num_samples: int,
     output_path: str,
+    revision: str = "main",
 ) -> list:
     if backend == "hf":
-        model_args = f"pretrained={model_name}"
+        model_args = f"pretrained={model_name},revision={revision}"
         if quantization == "int8":
             model_args += ",load_in_8bit=True"
         elif quantization == "int4":
@@ -47,7 +48,7 @@ def build_lm_eval_command(
         return [
             sys.executable, "-m", "lm_eval",
             "--model", "vllm",
-            "--model_args", f"pretrained={model_name},dtype=float16,gpu_memory_utilization=0.85",
+            "--model_args", f"pretrained={model_name},revision={revision},tokenizer_revision={revision},dtype=float16,gpu_memory_utilization=0.85",
             "--tasks", "truthfulqa_mc2",
             "--num_fewshot", "0",
             "--limit", str(num_samples),
@@ -69,6 +70,7 @@ def main():
         config = yaml.safe_load(f)
 
     model_name = config["model"]["name"]
+    revision = config["model"].get("revision", "main")
     num_samples = config["eval"]["truthfulqa"]["num_samples"]
     hardware = config.get("hardware", {}).get("gpu", "unknown")
 
@@ -87,6 +89,7 @@ def main():
         quantization=args.quantization,
         num_samples=num_samples,
         output_path=lm_eval_output_dir,
+        revision=revision,
     )
 
     print(f"  Running: {' '.join(cmd)}\n")
