@@ -76,6 +76,31 @@ streamlit run dashboard/app.py
 
 The analysis joins profiler and evaluation records by backend and quantization. It can plot throughput vs memory, quality vs efficiency, latency comparisons, and multi-objective Pareto membership. Empty or incomplete result sets are handled explicitly.
 
+## Run the full matrix on a GPU instance
+
+The backends have conflicting dependencies (vLLM pins its own torch), so the scripts use three venvs: `.venv-hf`, `.venv-vllm`, `.venv-llamacpp`.
+
+```bash
+export HF_TOKEN=...   # needs access to mistralai/Mistral-7B-v0.1
+INSTANCE_TYPE="1x A100 40GB" HOURLY_PRICE="1.29" scripts/setup_lambda.sh
+
+# Smoke run: cheap, catches bugs, writes to results/smoke (git-ignored)
+python3 scripts/make_config.py --out configs/smoke.yaml \
+  --revision "$(cat results/model_revision.txt)" \
+  --warmup 1 --runs 3 --mmlu-samples 5 --truthfulqa-samples 5
+scripts/run_matrix.sh --config configs/smoke.yaml --out results/smoke --repeats 1
+
+# Full run: 3 repeats per configuration, one backend at a time
+python3 scripts/make_config.py --out configs/final.yaml \
+  --revision "$(cat results/model_revision.txt)" \
+  --warmup 3 --runs 100 --mmlu-samples 50 --truthfulqa-samples 200
+scripts/run_matrix.sh --config configs/final.yaml --out results --repeats 3 --backend hf
+
+python3 analysis/results_table.py --results-dir results
+```
+
+`setup_lambda.sh` records the environment in `results/ENVIRONMENT.md`, pins the model revision, saves `pip freeze` per venv, and downloads the GGUF files with their SHA256. `run_matrix.sh` waits for GPU memory to return to idle before each step, logs every step, and lists failures in `FAILURES.txt` instead of dropping them. `results/smoke/timings.tsv` gives per-step durations for estimating the full run. MMLU `num_samples` applies per subtask (57 subtasks).
+
 ## Before making performance claims
 
 Do not cite a comparative result from this project until the evidence is committed or linked and the run is reproducible. At minimum:

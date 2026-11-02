@@ -3,6 +3,7 @@ __pycache__/
 *.egg-info/
 .env
 .venv/
+.venv-*/
 venv/
 
 # Model weights (too large for git)
@@ -11,9 +12,10 @@ models/
 *.bin
 *.safetensors
 
-# Results (commit selectively -- keep final JSON, ignore raw latency files)
-results/lm_eval/
-results/*_latencies.json
+# Results: commit summary, raw-latency and eval JSON plus lm-eval results files;
+# skip per-sample lm-eval logs (large) and smoke runs
+results/lm_eval/**/samples_*
+results/smoke/
 
 # MLflow local runs
 mlruns/
