@@ -27,6 +27,8 @@ def main():
         default=1,
         help="Number of concurrent requests to send (tests batching behavior)",
     )
+    parser.add_argument("--output-dir", default="results", help="Directory for result JSON files")
+    parser.add_argument("--tag", default="", help="Suffix for output files, e.g. run1 for repeated runs")
     args = parser.parse_args()
 
     with open(args.config) as f:
@@ -93,8 +95,11 @@ def main():
 
     profiler.print_summary(result)
 
-    tag = f"bs{args.batch_size}" if args.batch_size > 1 else ""
-    output_path = f"results/vllm_{quantization}{('_' + tag) if tag else ''}.json"
+    parts = [f"bs{args.batch_size}"] if args.batch_size > 1 else []
+    if args.tag:
+        parts.append(args.tag)
+    suffix = "".join(f"_{p}" for p in parts)
+    output_path = os.path.join(args.output_dir, f"vllm_{quantization}{suffix}.json")
     profiler.save_result(result, output_path)
 
     log_to_tracker(result, config, run_name=f"vllm_{quantization}")

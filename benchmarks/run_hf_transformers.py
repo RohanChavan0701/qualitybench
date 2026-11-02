@@ -73,6 +73,8 @@ def main():
         default=None,
         help="Override quantization (default: run all from config)",
     )
+    parser.add_argument("--output-dir", default="results", help="Directory for result JSON files")
+    parser.add_argument("--tag", default="", help="Suffix for output files, e.g. run1 for repeated runs")
     args = parser.parse_args()
 
     with open(args.config) as f:
@@ -132,7 +134,8 @@ def main():
 
         profiler.print_summary(result)
 
-        output_path = f"results/hf_transformers_{quant}.json"
+        suffix = f"_{args.tag}" if args.tag else ""
+        output_path = os.path.join(args.output_dir, f"hf_transformers_{quant}{suffix}.json")
         profiler.save_result(result, output_path)
 
         run_name = f"hf_{quant}"

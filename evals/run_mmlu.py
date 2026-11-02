@@ -28,7 +28,12 @@ import os
 import yaml
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from evals.eval_utils import EvalResult, save_eval_result, extract_lm_eval_accuracy
+from evals.eval_utils import (
+    EvalResult,
+    save_eval_result,
+    extract_lm_eval_accuracy,
+    find_latest_lm_eval_results,
+)
 
 
 def build_lm_eval_command(
@@ -79,6 +84,8 @@ def main():
     parser.add_argument("--config", required=True)
     parser.add_argument("--backend", required=True, choices=["hf", "vllm"])
     parser.add_argument("--quantization", required=True)
+    parser.add_argument("--output-dir", default="results", help="Directory for result JSON files")
+    parser.add_argument("--tag", default="", help="Suffix for output files, e.g. run1 for repeated runs")
     args = parser.parse_args()
 
     with open(args.config) as f:
@@ -89,7 +96,10 @@ def main():
     num_samples = config["eval"]["mmlu"]["num_samples"]
     hardware = config.get("hardware", {}).get("gpu", "unknown")
 
-    lm_eval_output_dir = f"results/lm_eval/mmlu_{args.backend}_{args.quantization}"
+    suffix = f"_{args.tag}" if args.tag else ""
+    lm_eval_output_dir = os.path.join(
+        args.output_dir, "lm_eval", f"mmlu_{args.backend}_{args.quantization}{suffix}"
+    )
     os.makedirs(lm_eval_output_dir, exist_ok=True)
 
     print(f"\n{'#'*60}")
@@ -114,21 +124,7 @@ def main():
         print(f"\n  lm_eval failed with exit code {proc.returncode}")
         sys.exit(1)
 
-    # Parse accuracy from output
-    # lm-eval writes a JSON file named after the model/task
-    # Find it in the output directory
-    lm_eval_json = None
-    for root, dirs, files in os.walk(lm_eval_output_dir):
-        for fname in files:
-            if fname.endswith(".json") and "results" in fname.lower():
-                lm_eval_json = os.path.join(root, fname)
-                break
-        if not lm_eval_json:
-            # Try any json file
-            for fname in files:
-                if fname.endswith(".json"):
-                    lm_eval_json = os.path.join(root, fname)
-                    break
+    lm_eval_json = find_latest_lm_eval_results(lm_eval_output_dir)
 
     accuracy = None
     if lm_eval_json:
@@ -149,7 +145,10 @@ def main():
             num_samples=num_samples,
             hardware=hardware,
         )
-        save_eval_result(result, f"results/eval_mmlu_{args.backend}_{args.quantization}.json")
+        save_eval_result(
+            result,
+            os.path.join(args.output_dir, f"eval_mmlu_{args.backend}_{args.quantization}{suffix}.json"),
+        )
 
         # Log to tracker
         tracking = config.get("tracking", {})

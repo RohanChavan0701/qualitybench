@@ -48,6 +48,23 @@ def load_all_results(results_dir: str) -> List[dict]:
     return results
 
 
+def find_latest_lm_eval_results(lm_eval_output_dir: str) -> Optional[str]:
+    """
+    Return the newest lm-eval results JSON under lm_eval_output_dir.
+
+    lm-eval writes a new timestamped results file on every run, so picking the
+    first file os.walk yields can return a stale result from an earlier run.
+    """
+    candidates = []
+    for root, _dirs, files in os.walk(lm_eval_output_dir):
+        for fname in files:
+            if fname.endswith(".json") and fname.lower().startswith("results"):
+                candidates.append(os.path.join(root, fname))
+    if not candidates:
+        return None
+    return max(candidates, key=os.path.getmtime)
+
+
 def extract_lm_eval_accuracy(lm_eval_output_path: str, task: str) -> Optional[float]:
     """
     Parse accuracy from lm-evaluation-harness output JSON.

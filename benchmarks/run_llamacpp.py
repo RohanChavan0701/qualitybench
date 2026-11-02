@@ -61,6 +61,8 @@ def main():
         default=-1,
         help="Number of layers to offload to GPU (-1 = all). Use 0 for pure CPU.",
     )
+    parser.add_argument("--output-dir", default="results", help="Directory for result JSON files")
+    parser.add_argument("--tag", default="", help="Suffix for output files, e.g. run1 for repeated runs")
     args = parser.parse_args()
 
     if not os.path.exists(args.model_path):
@@ -127,7 +129,8 @@ def main():
 
     profiler.print_summary(result)
 
-    output_path = f"results/llamacpp_{args.quantization}.json"
+    suffix = f"_{args.tag}" if args.tag else ""
+    output_path = os.path.join(args.output_dir, f"llamacpp_{args.quantization}{suffix}.json")
     profiler.save_result(result, output_path)
 
     log_to_tracker(result, config, run_name=f"llamacpp_{args.quantization}")
