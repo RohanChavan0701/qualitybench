@@ -69,6 +69,8 @@ def main():
     sampling_params = SamplingParams(
         temperature=0,
         max_tokens=max_new_tokens,
+        # Force exactly max_new_tokens so latency compares equal work across backends
+        ignore_eos=True,
     )
 
     # Build prompt batch

@@ -112,6 +112,8 @@ def main():
                 output = model.generate(  # noqa: F821
                     **inputs,
                     max_new_tokens=max_new_tokens,
+                    # Force exactly max_new_tokens so latency compares equal work across backends
+                    min_new_tokens=max_new_tokens,
                     do_sample=False,
                     temperature=1.0,
                     pad_token_id=tokenizer.eos_token_id,

@@ -109,7 +109,9 @@ def main():
             max_tokens=max_new_tokens,
             temperature=0,
             echo=False,
-            stop=["</s>", "\n\n"],
+            # Force exactly max_new_tokens so latency compares equal work across
+            # backends: no stop strings, and EOS can never be sampled.
+            logit_bias={str(llm.token_eos()): -1e9},
         )
         num_tokens = output["usage"]["completion_tokens"]
         return {"num_tokens": num_tokens}
