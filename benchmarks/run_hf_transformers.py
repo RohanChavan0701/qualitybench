@@ -9,6 +9,7 @@ Usage:
 """
 
 import argparse
+import gc
 import sys
 import os
 import yaml
@@ -98,12 +99,17 @@ def main():
         )
         quantizations = hf_backend["quantizations"] if hf_backend else ["fp16"]
 
+    # One baseline for the whole process: a per-variant baseline taken after an
+    # earlier variant would already include its CUDA context and cached blocks,
+    # understating later variants. For strictly independent memory numbers, run
+    # one --quantization per process.
+    baseline_mb = nvidia_smi_used_mb()
+
     for quant in quantizations:
         print(f"\n{'#'*60}")
         print(f"  HF Transformers | {model_name} | {quant}")
         print(f"{'#'*60}")
 
-        baseline_mb = nvidia_smi_used_mb()
         tokenizer, model = load_model_and_tokenizer(model_name, quant, revision)
         device = next(model.parameters()).device
         inputs = tokenizer(prompt, return_tensors="pt").to(device)
@@ -145,8 +151,10 @@ def main():
         run_name = f"hf_{quant}"
         log_to_tracker(result, config, run_name)
 
-        # Free VRAM before next quantization variant
+        # Free VRAM before next quantization variant so it is not counted in
+        # the next variant's peak
         del model
+        gc.collect()
         torch.cuda.empty_cache()
         print("  GPU cache cleared.")
 
