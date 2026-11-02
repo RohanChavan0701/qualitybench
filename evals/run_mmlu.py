@@ -47,11 +47,17 @@ def build_lm_eval_command(
     """Build the lm_eval CLI command."""
 
     if backend == "hf":
-        model_args = f"pretrained={model_name},revision={revision}"
+        # Load exactly as benchmarks/run_hf_transformers.py does, so quality
+        # is measured on the same artifact as speed. Without dtype=float16,
+        # lm-eval uses the checkpoint dtype (bf16 for Mistral).
+        model_args = f"pretrained={model_name},revision={revision},dtype=float16"
         if quantization == "int8":
             model_args += ",load_in_8bit=True"
         elif quantization == "int4":
-            model_args += ",load_in_4bit=True,bnb_4bit_quant_type=nf4"
+            model_args += (
+                ",load_in_4bit=True,bnb_4bit_quant_type=nf4"
+                ",bnb_4bit_compute_dtype=float16,bnb_4bit_use_double_quant=True"
+            )
         return [
             sys.executable, "-m", "lm_eval",
             "--model", "hf",
