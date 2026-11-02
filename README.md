@@ -10,7 +10,7 @@ A framework for measuring LLM inference quality–efficiency tradeoffs across Hu
 
 | Area | What exists |
 |---|---|
-| Profiling | Shared warmup/timing loop with CUDA synchronization, p50/p99/mean latency, tokens per second, PyTorch peak memory, and periodic `nvidia-smi` sampling |
+| Profiling | Shared warmup/timing loop with CUDA synchronization, p50/p99/mean latency, tokens per second, and peak GPU memory as the `nvidia-smi` increase over a pre-load baseline (PyTorch allocator peak kept as a secondary field) |
 | Backends | Runners for Hugging Face FP16/INT8/INT4, vLLM FP16, and llama.cpp GGUF models |
 | Quality evaluation | `lm-evaluation-harness` command wrappers for MMLU and TruthfulQA MC2 on Hugging Face or vLLM |
 | Analysis | Result merging, two- and three-objective Pareto selection, and Plotly HTML charts |

@@ -4,7 +4,10 @@ profiler.py - Shared profiling utilities for QualityBench.
 Captures:
   - p50 and p99 latency (not just mean)
   - Throughput in tokens/sec
-  - Peak GPU memory via torch.cuda AND nvidia-smi subprocess (ground truth)
+  - Peak GPU memory via nvidia-smi, as the increase over an idle baseline taken
+    before the model loads. This is the only measure that works for every
+    backend: llama.cpp does not allocate through torch, and vLLM preallocates
+    its KV-cache pool. The torch allocator peak is kept as a secondary field.
 """
 
 import time
@@ -16,6 +19,18 @@ import numpy as np
 import torch
 from dataclasses import dataclass, field, asdict
 from typing import Callable, Dict, List, Optional
+
+
+def nvidia_smi_used_mb() -> Optional[float]:
+    """Return current used GPU memory from nvidia-smi (in MB)."""
+    try:
+        out = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,nounits,noheader"],
+            timeout=5,
+        ).decode().strip()
+        return float(out.split("\n")[0])
+    except Exception:
+        return None
 
 
 @dataclass
@@ -30,8 +45,11 @@ class ProfileResult:
     p99_latency_ms: float
     mean_latency_ms: float
     throughput_tokens_per_sec: float
-    peak_gpu_memory_mb: float   # torch peak (most reliable for tracking across runs)
-    nvidia_smi_used_mb: float   # snapshot from nvidia-smi at peak
+    peak_gpu_memory_mb: float   # nvidia-smi peak minus baseline (comparable across backends)
+    nvidia_smi_used_mb: float   # raw nvidia-smi peak, includes baseline
+    gpu_memory_baseline_mb: float  # nvidia-smi before model load
+    torch_peak_allocated_mb: float  # torch allocator peak; 0 for non-torch backends
+    gpu_memory_source: str      # "nvidia_smi_delta", or "torch" if nvidia-smi was unavailable
     hardware: str
     timestamp: str = field(default_factory=lambda: datetime.datetime.utcnow().isoformat())
 
@@ -43,11 +61,14 @@ class Profiler:
         model_name: str,
         quantization: str,
         hardware: str = "T4",
+        baseline_gpu_memory_mb: Optional[float] = None,
     ):
         self.backend = backend
         self.model_name = model_name
         self.quantization = quantization
         self.hardware = hardware
+        # Capture with nvidia_smi_used_mb() before loading the model
+        self.baseline_gpu_memory_mb = baseline_gpu_memory_mb
 
     # ------------------------------------------------------------------
     # GPU memory helpers
@@ -63,15 +84,7 @@ class Profiler:
         }
 
     def _nvidia_smi_memory_mb(self) -> Optional[float]:
-        """Return current used GPU memory from nvidia-smi (in MB)."""
-        try:
-            out = subprocess.check_output(
-                ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,nounits,noheader"],
-                timeout=5,
-            ).decode().strip()
-            return float(out.split("\n")[0])
-        except Exception:
-            return None
+        return nvidia_smi_used_mb()
 
     def _reset_peak_memory(self):
         if torch.cuda.is_available():
@@ -139,8 +152,14 @@ class Profiler:
         total_time_s = arr.sum() / 1000.0
         throughput = total_tokens / total_time_s if total_time_s > 0 else 0.0
 
-        torch_mem = self._torch_memory_mb()
-        peak_gpu_mb = torch_mem.get("peak_mb", peak_nvidia_smi)
+        torch_peak_mb = self._torch_memory_mb().get("peak_mb", 0.0)
+        baseline = self.baseline_gpu_memory_mb
+        if baseline is not None and peak_nvidia_smi > 0:
+            peak_gpu_mb = peak_nvidia_smi - baseline
+            memory_source = "nvidia_smi_delta"
+        else:
+            peak_gpu_mb = torch_peak_mb
+            memory_source = "torch"
 
         return ProfileResult(
             backend=self.backend,
@@ -155,6 +174,9 @@ class Profiler:
             throughput_tokens_per_sec=throughput,
             peak_gpu_memory_mb=peak_gpu_mb,
             nvidia_smi_used_mb=peak_nvidia_smi,
+            gpu_memory_baseline_mb=baseline if baseline is not None else 0.0,
+            torch_peak_allocated_mb=torch_peak_mb,
+            gpu_memory_source=memory_source,
             hardware=self.hardware,
         )
 
@@ -185,7 +207,7 @@ class Profiler:
         print(f"  p99 latency : {result.p99_latency_ms:.1f} ms")
         print(f"  Mean latency: {result.mean_latency_ms:.1f} ms")
         print(f"  Throughput  : {result.throughput_tokens_per_sec:.1f} tok/s")
-        print(f"  Peak GPU mem: {result.peak_gpu_memory_mb:.0f} MB")
+        print(f"  Peak GPU mem: {result.peak_gpu_memory_mb:.0f} MB ({result.gpu_memory_source})")
         print(f"{'='*55}\n")
 
 

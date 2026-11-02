@@ -15,7 +15,7 @@ import sys
 import os
 import yaml
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from benchmarks.profiler import Profiler, log_to_tracker
+from benchmarks.profiler import Profiler, log_to_tracker, nvidia_smi_used_mb
 
 
 def main():
@@ -57,6 +57,7 @@ def main():
         sys.exit(1)
 
     print("  Loading vLLM engine (this downloads model on first run)...")
+    baseline_mb = nvidia_smi_used_mb()
     llm = LLM(
         model=model_name,
         revision=revision,
@@ -86,6 +87,7 @@ def main():
         model_name=model_name,
         quantization=quantization,
         hardware=hardware,
+        baseline_gpu_memory_mb=baseline_mb,
     )
 
     result = profiler.profile_generation(

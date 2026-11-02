@@ -16,7 +16,7 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from benchmarks.profiler import Profiler, log_to_tracker
+from benchmarks.profiler import Profiler, log_to_tracker, nvidia_smi_used_mb
 
 
 QUANT_CHOICES = ["fp16", "int8", "int4"]
@@ -103,6 +103,7 @@ def main():
         print(f"  HF Transformers | {model_name} | {quant}")
         print(f"{'#'*60}")
 
+        baseline_mb = nvidia_smi_used_mb()
         tokenizer, model = load_model_and_tokenizer(model_name, quant, revision)
         device = next(model.parameters()).device
         inputs = tokenizer(prompt, return_tensors="pt").to(device)
@@ -126,6 +127,7 @@ def main():
             model_name=model_name,
             quantization=quant,
             hardware=hardware,
+            baseline_gpu_memory_mb=baseline_mb,
         )
 
         result = profiler.profile_generation(

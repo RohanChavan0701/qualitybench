@@ -29,7 +29,7 @@ import os
 import yaml
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from benchmarks.profiler import Profiler, log_to_tracker
+from benchmarks.profiler import Profiler, log_to_tracker, nvidia_smi_used_mb
 
 
 QUANT_CHOICES = ["q4_k_m", "q8_0"]
@@ -96,6 +96,7 @@ def main():
         sys.exit(1)
 
     print("  Loading model...", flush=True)
+    baseline_mb = nvidia_smi_used_mb()
     llm = Llama(
         model_path=args.model_path,
         n_gpu_layers=args.n_gpu_layers,
@@ -121,6 +122,7 @@ def main():
         model_name=model_name,
         quantization=args.quantization,
         hardware=hardware,
+        baseline_gpu_memory_mb=baseline_mb,
     )
 
     result = profiler.profile_generation(
