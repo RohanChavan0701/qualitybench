@@ -26,10 +26,47 @@ from evals.eval_utils import load_all_results
 # Data loading & merging
 # ---------------------------------------------------------------------------
 
+# Eval wrappers name the HF backend "hf"; benchmark runners name it "hf_transformers"
+EVAL_BACKEND_ALIASES = {"hf": "hf_transformers"}
+
+CONFIG_KEYS = ["backend", "quantization", "batch_size"]
+
+# Metrics averaged across repeated runs of one configuration; *_std columns hold
+# the sample standard deviation (NaN when only one run exists)
+REPEATED_METRICS = [
+    "throughput_tokens_per_sec",
+    "p50_latency_ms",
+    "p99_latency_ms",
+    "mean_latency_ms",
+    "peak_gpu_memory_mb",
+]
+
+
+def aggregate_runs(df_bench: pd.DataFrame) -> pd.DataFrame:
+    """Collapse repeated runs (e.g. --tag run1/run2/run3) to one row per configuration."""
+    if "batch_size" not in df_bench.columns:
+        df_bench = df_bench.assign(batch_size=1)
+    metrics = [m for m in REPEATED_METRICS if m in df_bench.columns]
+    grouped = df_bench.groupby(CONFIG_KEYS, as_index=False)
+
+    agg = grouped[metrics].mean()
+    std = grouped[metrics].std().rename(columns={m: f"{m}_std" for m in metrics})
+    agg = agg.merge(std, on=CONFIG_KEYS)
+    agg = agg.merge(grouped.size().rename(columns={"size": "n_runs"}), on=CONFIG_KEYS)
+
+    # Carry descriptive columns (first value per configuration)
+    other = [c for c in ["model_name", "hardware", "num_tokens_generated", "gpu_memory_source"]
+             if c in df_bench.columns]
+    if other:
+        agg = agg.merge(grouped[other].first(), on=CONFIG_KEYS)
+    return agg
+
+
 def build_combined_df(results_dir: str) -> pd.DataFrame:
     """
     Merge benchmark results (throughput/latency/memory) with eval results
-    (accuracy) into a single DataFrame keyed on (backend, quantization).
+    (accuracy) into a single DataFrame with one row per configuration
+    (backend, quantization, batch size). Repeated benchmark runs are averaged.
     """
     records = load_all_results(results_dir)
 
@@ -50,6 +87,8 @@ def build_combined_df(results_dir: str) -> pd.DataFrame:
         print("Warning: No benchmark results found in", results_dir)
         return pd.DataFrame()
 
+    df_bench = aggregate_runs(df_bench)
+
     # Compute efficiency metric
     if "peak_gpu_memory_mb" in df_bench.columns:
         df_bench["efficiency_tps_per_gb"] = (
@@ -60,11 +99,17 @@ def build_combined_df(results_dir: str) -> pd.DataFrame:
         df_bench["efficiency_tps_per_gb"] = df_bench.get("throughput_tokens_per_sec", 0)
 
     df_bench["label"] = df_bench["backend"] + " / " + df_bench["quantization"]
+    batched = df_bench["batch_size"] > 1
+    df_bench.loc[batched, "label"] += " / bs" + df_bench.loc[batched, "batch_size"].astype(str)
 
     if df_eval.empty:
         df_bench["mmlu_accuracy"] = None
         df_bench["truthfulqa_accuracy"] = None
         return df_bench
+
+    df_eval["backend"] = df_eval["backend"].replace(EVAL_BACKEND_ALIASES)
+    # One accuracy per (backend, quantization, task): average if evals were repeated
+    df_eval = df_eval.groupby(["backend", "quantization", "task"], as_index=False)["accuracy"].mean()
 
     # Pivot eval results: one row per (backend, quantization), columns per task
     mmlu = df_eval[df_eval["task"] == "mmlu"][["backend", "quantization", "accuracy"]].rename(
