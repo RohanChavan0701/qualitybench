@@ -4,7 +4,7 @@ A framework for measuring LLM inference quality–efficiency tradeoffs across Hu
 
 **Current status:** the framework is implemented, but `results/` contains no committed benchmark outputs. This repository therefore makes no backend, quantization, latency, throughput, memory, or quality winner claims.
 
-[Configuration](configs/benchmark_config.yaml) · [Colab notebook](notebooks/colab_benchmark.ipynb) · [Repository](https://github.com/rohanpc0701/qualitybench)
+[Configuration](configs/benchmark_config.yaml) · [Colab notebook](notebooks/colab_benchmark.ipynb) · [Repository](https://github.com/RohanChavan0701/qualitybench)
 
 ## Implemented components
 
@@ -25,7 +25,7 @@ The default configuration uses `mistralai/Mistral-7B-v0.1`, three warmup generat
 Python 3.11 and a CUDA-capable environment are expected for the configured GPU runs.
 
 ```bash
-git clone https://github.com/rohanpc0701/qualitybench.git
+git clone https://github.com/RohanChavan0701/qualitybench.git
 cd qualitybench
 python3 -m pip install -r requirements.txt
 ```
