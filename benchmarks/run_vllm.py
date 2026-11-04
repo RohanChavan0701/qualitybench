@@ -18,6 +18,12 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from benchmarks.profiler import Profiler, log_to_tracker, nvidia_smi_used_mb
 
 
+# vLLM refuses to start if the model's full context (32768 tokens for Mistral)
+# does not fit its KV cache, which it does not on a 24 GB GPU. Prompts here are
+# far shorter than this limit.
+MAX_MODEL_LEN = 4096
+
+
 def main():
     parser = argparse.ArgumentParser(description="vLLM benchmark runner")
     parser.add_argument("--config", required=True, help="Path to benchmark_config.yaml")
@@ -63,6 +69,7 @@ def main():
         revision=revision,
         tokenizer_revision=revision,
         dtype="float16",
+        max_model_len=MAX_MODEL_LEN,
         # gpu_memory_utilization=0.90,  # leave 10% headroom; tune if OOM
         trust_remote_code=True,
     )

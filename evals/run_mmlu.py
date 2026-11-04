@@ -73,7 +73,7 @@ def build_lm_eval_command(
         return [
             sys.executable, "-m", "lm_eval",
             "--model", "vllm",
-            "--model_args", f"pretrained={model_name},revision={revision},tokenizer_revision={revision},dtype=float16,gpu_memory_utilization=0.85",
+            "--model_args", f"pretrained={model_name},revision={revision},tokenizer_revision={revision},dtype=float16,gpu_memory_utilization=0.85,max_length=4096",
             "--tasks", "mmlu",
             "--num_fewshot", "5",
             "--limit", str(num_samples),
