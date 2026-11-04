@@ -120,6 +120,10 @@ make_venv .venv-vllm
 # vLLM pins its own torch; install it first and let it choose
 .venv-vllm/bin/pip install -q vllm==0.4.2 transformers==4.40.2
 .venv-vllm/bin/pip install -q lm-eval==0.4.3 pyyaml==6.0.1 numpy mlflow==2.12.2 \n  peft==0.10.0 accelerate==0.29.3 datasets==2.19.1
+# vLLM 0.4.2 drops prompt_logprobs when detokenize=False, which is what lm-eval 0.4.3
+# sends for loglikelihood requests, so every vLLM eval crashes. Only the decoded text
+# changes; scoring uses token ids.
+sed -i "s/prompt_logprobs=1, max_tokens=1, detokenize=False/prompt_logprobs=1, max_tokens=1, detokenize=True/" \n  .venv-vllm/lib/python3*/site-packages/lm_eval/models/vllm_causallms.py
 check_gpu .venv-vllm
 
 log "Building .venv-llamacpp (CUDA build)"
@@ -201,7 +205,11 @@ done
   echo
   echo "| Package | Pinned | Used | Reason |"
   echo "|---|---|---|---|"
-  echo "| (none recorded) | | | |"
+  echo "| lm-eval (.venv-vllm only) | 0.4.3 | 0.4.3, one line patched | \`detokenize=True\` in \`vllm_causallms.py\`: vLLM 0.4.2 drops prompt_logprobs otherwise |"
+  echo "| peft | not pinned | 0.10.0 | newest peft needs newer accelerate/transformers than this stack; lm-eval failed to import |"
+  echo "| transformers (.venv-vllm) | not pinned for vLLM | 4.40.2 | newest requires torch >= 2.6; vLLM ships torch 2.3.0 |"
+  echo "| accelerate, datasets (.venv-vllm) | not pinned for vLLM | 0.29.3, 2.19.1 | match the HF venv |"
+  echo "| torch (.venv-vllm) | 2.2.2 | 2.3.0 | vLLM 0.4.2 pins its own torch |"
 } >> "$ENV_MD"
 
 log "Done"
