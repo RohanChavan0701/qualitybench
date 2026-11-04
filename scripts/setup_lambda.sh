@@ -41,11 +41,11 @@ log "Checking disk"
 free_gb=$(df -BG --output=avail ~ | tail -1 | tr -dc '0-9')
 [ "$free_gb" -ge "$MIN_FREE_GB" ] || die "only ${free_gb} GB free in ~, need ${MIN_FREE_GB} GB"
 
-log "Checking HF_TOKEN"
-[ -n "${HF_TOKEN:-}" ] || die "HF_TOKEN is not set"
-
-log "Checking git push access"
-git push --dry-run origin HEAD >/dev/null 2>&1 || die "git push --dry-run failed; set up GitHub auth"
+# Set SKIP_PUSH_CHECK=1 when results are copied off the instance instead of pushed from it
+if [ -z "${SKIP_PUSH_CHECK:-}" ]; then
+  log "Checking git push access"
+  git push --dry-run origin HEAD >/dev/null 2>&1 || die "git push --dry-run failed; set up GitHub auth"
+fi
 
 log "Recording environment"
 {
@@ -146,6 +146,10 @@ done
 # ---------------------------------------------------------------------------
 # Model access, revision pin, GGUF download
 # ---------------------------------------------------------------------------
+
+# Checked here, not in preflight: the venvs do not need the token, and a rerun
+# reuses them, so a missing token costs nothing already built
+[ -n "${HF_TOKEN:-}" ] || die "HF_TOKEN is not set"
 
 log "Checking access to $MODEL and pinning revision"
 .venv-hf/bin/python - "$MODEL" <<'EOF' > results/model_revision.txt
