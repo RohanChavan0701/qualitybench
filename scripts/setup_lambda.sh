@@ -112,14 +112,14 @@ make_venv .venv-hf
   torch==2.2.2 transformers==4.40.2 accelerate==0.29.3 bitsandbytes==0.43.1 \
   lm-eval==0.4.3 datasets==2.19.1 numpy==1.26.4 pyyaml==6.0.1 tqdm==4.66.2 \
   pandas==2.2.2 plotly==5.21.0 streamlit==1.34.0 mlflow==2.12.2 \
-  nvidia-ml-py3==7.352.0 huggingface_hub
+  nvidia-ml-py3==7.352.0 huggingface_hub peft==0.10.0
 check_gpu .venv-hf
 
 log "Building .venv-vllm"
 make_venv .venv-vllm
 # vLLM pins its own torch; install it first and let it choose
 .venv-vllm/bin/pip install -q vllm==0.4.2 transformers==4.40.2
-.venv-vllm/bin/pip install -q lm-eval==0.4.3 pyyaml==6.0.1 numpy mlflow==2.12.2
+.venv-vllm/bin/pip install -q lm-eval==0.4.3 pyyaml==6.0.1 numpy mlflow==2.12.2 \n  peft==0.10.0 accelerate==0.29.3 datasets==2.19.1
 check_gpu .venv-vllm
 
 log "Building .venv-llamacpp (CUDA build)"
