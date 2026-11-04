@@ -119,11 +119,13 @@ log "Building .venv-vllm"
 make_venv .venv-vllm
 # vLLM pins its own torch; install it first and let it choose
 .venv-vllm/bin/pip install -q vllm==0.4.2 transformers==4.40.2
-.venv-vllm/bin/pip install -q lm-eval==0.4.3 pyyaml==6.0.1 numpy mlflow==2.12.2 \n  peft==0.10.0 accelerate==0.29.3 datasets==2.19.1
+.venv-vllm/bin/pip install -q lm-eval==0.4.3 pyyaml==6.0.1 numpy mlflow==2.12.2 \
+  peft==0.10.0 accelerate==0.29.3 datasets==2.19.1
 # vLLM 0.4.2 drops prompt_logprobs when detokenize=False, which is what lm-eval 0.4.3
 # sends for loglikelihood requests, so every vLLM eval crashes. Only the decoded text
 # changes; scoring uses token ids.
-sed -i "s/prompt_logprobs=1, max_tokens=1, detokenize=False/prompt_logprobs=1, max_tokens=1, detokenize=True/" \n  .venv-vllm/lib/python3*/site-packages/lm_eval/models/vllm_causallms.py
+sed -i "s/prompt_logprobs=1, max_tokens=1, detokenize=False/prompt_logprobs=1, max_tokens=1, detokenize=True/" \
+  .venv-vllm/lib/python3*/site-packages/lm_eval/models/vllm_causallms.py
 check_gpu .venv-vllm
 
 log "Building .venv-llamacpp (CUDA build)"
