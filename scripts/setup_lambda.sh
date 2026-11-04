@@ -118,7 +118,7 @@ check_gpu .venv-hf
 log "Building .venv-vllm"
 make_venv .venv-vllm
 # vLLM pins its own torch; install it first and let it choose
-.venv-vllm/bin/pip install -q vllm==0.4.2
+.venv-vllm/bin/pip install -q vllm==0.4.2 transformers==4.40.2
 .venv-vllm/bin/pip install -q lm-eval==0.4.3 pyyaml==6.0.1 numpy mlflow==2.12.2
 check_gpu .venv-vllm
 
