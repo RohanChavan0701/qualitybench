@@ -1,0 +1,10 @@
+{
+  "backend": "vllm",
+  "model_name": "mistralai/Mistral-7B-v0.1",
+  "quantization": "fp16",
+  "task": "mmlu",
+  "accuracy": 0.6407017543859649,
+  "num_samples": 50,
+  "hardware": "NVIDIA A100-SXM4-40GB",
+  "timestamp": "2026-11-05T03:07:38.810732"
+}

@@ -1,0 +1,26 @@
+
+############################################################
+  llama.cpp | q8_0 | n_gpu_layers=-1
+  File: mistral-7b-v0.1.Q8_0.gguf
+  Approx size: 7.7 GB
+############################################################
+  Loading model...
+  Warmup (3 runs)...
+  Benchmarking (100 runs)...
+
+=======================================================
+  Backend     : llamacpp
+  Quantization: q8_0
+  p50 latency : 1202.0 ms
+  p99 latency : 1205.7 ms
+  Mean latency: 1202.2 ms
+  Throughput  : 106.5 tok/s
+  Peak GPU mem: 8189 MB (nvidia_smi_delta)
+=======================================================
+
+  Saved: results/llamacpp_q8_0_run1.json
+  Saved: results/llamacpp_q8_0_run1_latencies.json
+
+  COMPARE: Check if p50 latency beats vLLM fp16 -- llama.cpp Q8_0 often wins
+  on single-request latency due to tighter GGUF memory layout.
+

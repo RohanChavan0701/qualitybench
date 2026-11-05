@@ -1,0 +1,18 @@
+{
+  "backend": "vllm",
+  "model_name": "mistralai/Mistral-7B-v0.1",
+  "quantization": "fp16",
+  "batch_size": 1,
+  "num_tokens_generated": 128,
+  "p50_latency_ms": 1733.2625275012106,
+  "p99_latency_ms": 1736.1504904976755,
+  "mean_latency_ms": 1733.2193649401233,
+  "throughput_tokens_per_sec": 73.85100962359832,
+  "peak_gpu_memory_mb": 36555.0,
+  "nvidia_smi_used_mb": 36555.0,
+  "gpu_memory_baseline_mb": 0.0,
+  "torch_peak_allocated_mb": 35507.8271484375,
+  "gpu_memory_source": "nvidia_smi_delta",
+  "hardware": "NVIDIA A100-SXM4-40GB",
+  "timestamp": "2026-11-05T02:26:54.974710"
+}

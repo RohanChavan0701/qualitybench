@@ -14,3 +14,14 @@ eval_mmlu_hf_int8	1393	0
 eval_truthfulqa_hf_int8	537	0
 eval_mmlu_hf_int4	541	0
 eval_truthfulqa_hf_int4	143	0
+bench_vllm_fp16_run1	199	0
+bench_vllm_fp16_run2	199	0
+bench_vllm_fp16_run3	199	0
+eval_mmlu_vllm_fp16	2242	0
+eval_truthfulqa_vllm_fp16	87	0
+bench_llamacpp_q4_k_m_run1	104	0
+bench_llamacpp_q4_k_m_run2	104	0
+bench_llamacpp_q4_k_m_run3	104	0
+bench_llamacpp_q8_0_run1	128	0
+bench_llamacpp_q8_0_run2	128	0
+bench_llamacpp_q8_0_run3	127	0
