@@ -1,0 +1,26 @@
+
+############################################################
+  HF Transformers | mistralai/Mistral-7B-v0.1 | int4
+############################################################
+  Loading mistralai/Mistral-7B-v0.1@27d67f1b5f57dc0953326b2601d68371d40ea8da [int4] ...
+/home/ubuntu/qualitybench/.venv-hf/lib/python3.10/site-packages/huggingface_hub/file_download.py:949: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
+  warnings.warn(
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:03<00:03,  3.27s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:04<00:00,  2.18s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:04<00:00,  2.34s/it]
+/home/ubuntu/qualitybench/.venv-hf/lib/python3.10/site-packages/huggingface_hub/file_download.py:949: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
+  warnings.warn(
+  Warmup (3 runs)...
+  Benchmarking (100 runs)...
+
+=======================================================
+  Backend     : hf_transformers
+  Quantization: int4
+  p50 latency : 7202.5 ms
+  p99 latency : 7288.7 ms
+  Mean latency: 7211.4 ms
+  Throughput  : 17.7 tok/s
+  Peak GPU mem: 5295 MB (nvidia_smi_delta)
+=======================================================
+
+  Saved: results/hf_transformers_int4_run3.json
+  Saved: results/hf_transformers_int4_run3_latencies.json
+  GPU cache cleared.

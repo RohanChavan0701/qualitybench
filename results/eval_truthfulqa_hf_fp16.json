@@ -1,0 +1,10 @@
+{
+  "backend": "hf",
+  "model_name": "mistralai/Mistral-7B-v0.1",
+  "quantization": "fp16",
+  "task": "truthfulqa_mc2",
+  "accuracy": 0.40612583858057233,
+  "num_samples": 200,
+  "hardware": "NVIDIA A100-SXM4-40GB",
+  "timestamp": "2026-11-05T01:36:45.446443"
+}
