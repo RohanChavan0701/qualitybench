@@ -2,7 +2,7 @@
 
 A framework for measuring LLM inference quality–efficiency tradeoffs across Hugging Face Transformers, vLLM, and llama.cpp. It collects generation latency, throughput, and GPU-memory data; wraps MMLU and TruthfulQA evaluation; and builds Pareto views from compatible result files.
 
-**Current status:** the framework is implemented, but `results/` contains no committed benchmark outputs. This repository therefore makes no backend, quantization, latency, throughput, memory, or quality winner claims.
+**Current status (2026-11-05):** first full run committed in `results/`, covering one model on one GPU. See [Results](#results) and its limitations before citing any number.
 
 [Configuration](configs/benchmark_config.yaml) · [Colab notebook](notebooks/colab_benchmark.ipynb) · [Repository](https://github.com/RohanChavan0701/qualitybench)
 
@@ -18,7 +18,45 @@ A framework for measuring LLM inference quality–efficiency tradeoffs across Hu
 | Tracking | Optional local MLflow or Weights & Biases logging selected in YAML |
 | Automation | CI lint, import, config-schema, and dashboard syntax checks; GPU benchmarks are not run in CI |
 
-The default configuration uses `mistralai/Mistral-7B-v0.1`, three warmup generations, 50 measured generations, 100 MMLU samples, and 50 TruthfulQA samples. These are experiment settings, not reported results.
+The default configuration uses `mistralai/Mistral-7B-v0.1`, three warmup generations, 50 measured generations, 100 MMLU samples, and 50 TruthfulQA samples. These are experiment settings, not reported results. The run below used [`configs/final.yaml`](configs/final.yaml).
+
+## Results
+
+**Setup:** NVIDIA A100-SXM4 40 GB on Lambda Cloud, driver 570.148.08, Ubuntu 22.04, Python 3.10.12. Model `mistralai/Mistral-7B-v0.1` at revision `27d67f1b5f57dc0953326b2601d68371d40ea8da`. GGUF files from `TheBloke/Mistral-7B-v0.1-GGUF`, with hashes in [`results/ENVIRONMENT.md`](results/ENVIRONMENT.md).
+
+**Versions:** transformers 4.40.2, bitsandbytes 0.43.1, vLLM 0.4.2, llama-cpp-python 0.2.77, lm-eval 0.4.3, torch 2.2.2 (2.3.0 for vLLM).
+
+**Config:** same prompt, exactly 128 new tokens, batch size 1, 3 warmup generations and 100 measured generations, repeated 3 times in separate processes. MMLU: 50 questions per subtask, 2,850 in total, 5-shot. TruthfulQA MC2: 200 questions. Each eval ran once per configuration.
+
+| Backend | Precision | Runs | Tokens/s | p50 latency (ms) | p99 latency (ms) | Peak GPU memory (MB) | MMLU | TruthfulQA MC2 |
+|---|---|---|---|---|---|---|---|---|
+| hf_transformers | fp16 | 3 | 36.9 ± 0.3 | 3461.8 ± 28.5 | 3511.5 ± 38.5 | 15163 ± 0 | 63.9% | 40.6% |
+| hf_transformers | int8 | 3 | 4.7 ± 0.0 | 27350.4 ± 108.3 | 27608.1 ± 104.2 | 11005 ± 0 | 63.9% | 40.6% |
+| hf_transformers | int4 | 3 | 17.8 ± 0.1 | 7166.5 ± 56.9 | 7270.4 ± 32.0 | 5295 ± 0 | 62.8% | 40.3% |
+| vllm | fp16 | 3 | 73.9 ± 0.1 | 1732.0 ± 1.8 | 1737.0 ± 0.9 | 36555 ± 0 | 64.1% | 40.6% |
+| llamacpp | q4_k_m | 3 | 130.7 ± 0.1 | 979.4 ± 0.9 | 985.1 ± 2.6 | 5079 ± 0 | not evaluated | not evaluated |
+| llamacpp | q8_0 | 3 | 106.6 ± 0.1 | 1200.1 ± 1.7 | 1204.3 ± 1.3 | 8189 ± 0 | not evaluated | not evaluated |
+
+Values are mean ± std across the 3 repeats. Latency is the full 128-token generation, not time to first token. No configuration failed.
+
+**Pareto front** (on run means; charts: [throughput vs memory](results/pareto_throughput_memory.html), [quality vs efficiency](results/pareto_quality_efficiency.html), [latency](results/latency_comparison.html)):
+
+- Throughput vs memory: llama.cpp Q4_K_M
+- Latency vs memory: llama.cpp Q4_K_M
+- MMLU vs tokens/s per GB: HF FP16, HF INT4, vLLM FP16. llama.cpp is left out because it has no quality score.
+
+### Limitations
+
+- **Single GPU type and one model.** These numbers do not transfer to other hardware or models.
+- **One prompt at batch size 1.** Nothing here measures concurrent serving, which is the workload vLLM is built for.
+- **Sample sizes.** The MMLU margin is about ±1.8 points and the TruthfulQA margin about ±7 points (95%, binomial approximation). The accuracy gaps between configurations are smaller than these margins, so this run does not show that any configuration is more accurate, and it does not show that quantization has no quality cost.
+- **GGUF is a different artifact.** llama.cpp runs use separately converted community files, not the same weights as the HF and vLLM runs.
+- **llama.cpp has no quality evals.** Its speed and memory cannot be weighed against accuracy from this data.
+- **vLLM memory is an allocation, not a requirement.** vLLM preallocates a share of the GPU for its KV cache, so its figure reflects this GPU's size.
+- **vLLM uses a different context limit.** `max_model_len` is 4096 for vLLM only, so that it starts on smaller GPUs. Prompts are far below this limit.
+- **vLLM evals use a patched harness.** One line of lm-eval is changed at install so vLLM 0.4.2 returns the prompt logprobs. See `scripts/setup_lambda.sh`.
+- **Version deviations.** peft 0.10.0, and transformers, accelerate and datasets in the vLLM venv, are pinned beyond `requirements.txt`; vLLM uses torch 2.3.0; Python is 3.10.12, not the 3.11 stated under Install. See [`results/ENVIRONMENT.md`](results/ENVIRONMENT.md).
+- **Eval scores are not portable across GPUs.** In smoke tests, HF INT8 scored differently on an A10 and an A100 on the same 285 questions, cause unknown. Do not mix these results with runs from other hardware.
 
 ## Install
 
